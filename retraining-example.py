@@ -36,15 +36,23 @@ For testing through python, change and run this code.
 import numpy as np
 import tensorflow as tf
 
-imagePath = '/tmp/imagenet/flower.jpg'
-modelFullPath = '/tmp/output_graph.pb'
-labelsFullPath = '/tmp/output_labels.txt'
+FLAGS = tf.app.flags.FLAGS
+
+# Input and output file flags.
+tf.app.flags.DEFINE_string('image_path', '',
+                           """Path to image to test.""")
+tf.app.flags.DEFINE_string('output_graph', '/tmp/output_graph.pb',
+                           """Where to get the trained graph.""")
+tf.app.flags.DEFINE_string('output_labels', '/tmp/output_labels.txt',
+                           """Where to get the trained graph's labels.""")
+tf.app.flags.DEFINE_string('final_tensor_name', 'final_layer/final_result/Softmax:0',
+                           """The name of the final tensor in the graph.""")
 
 
 def create_graph():
     """Creates a graph from saved GraphDef file and returns a saver."""
     # Creates graph from saved graph_def.pb.
-    with tf.gfile.FastGFile(modelFullPath, 'rb') as f:
+    with tf.gfile.FastGFile(FLAGS.output_graph, 'rb') as f:
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
         _ = tf.import_graph_def(graph_def, name='')
@@ -53,24 +61,24 @@ def create_graph():
 def run_inference_on_image():
     answer = None
 
-    if not tf.gfile.Exists(imagePath):
-        tf.logging.fatal('File does not exist %s', imagePath)
+    if not tf.gfile.Exists(FLAGS.image_path):
+        tf.logging.fatal('File does not exist %s', FLAGS.image_path)
         return answer
 
-    image_data = tf.gfile.FastGFile(imagePath, 'rb').read()
+    image_data = tf.gfile.FastGFile(FLAGS.image_path, 'rb').read()
 
     # Creates graph from saved GraphDef.
     create_graph()
 
     with tf.Session() as sess:
 
-        softmax_tensor = sess.graph.get_tensor_by_name('final_result:0')
+        softmax_tensor = sess.graph.get_tensor_by_name(FLAGS.final_tensor_name)
         predictions = sess.run(softmax_tensor,
                                {'DecodeJpeg/contents:0': image_data})
         predictions = np.squeeze(predictions)
 
         top_k = predictions.argsort()[-5:][::-1]  # Getting top 5 predictions
-        f = open(labelsFullPath, 'rb')
+        f = open(FLAGS.output_labels, 'rb')
         lines = f.readlines()
         labels = [str(w).replace("\n", "") for w in lines]
         for node_id in top_k:
@@ -82,5 +90,8 @@ def run_inference_on_image():
         return answer
 
 
-if __name__ == '__main__':
+def main(_):
     run_inference_on_image()
+
+if __name__ == '__main__':
+    tf.app.run()
