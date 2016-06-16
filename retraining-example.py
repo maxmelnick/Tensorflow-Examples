@@ -74,7 +74,7 @@ def run_inference_on_image():
 
         softmax_tensor = sess.graph.get_tensor_by_name(FLAGS.final_tensor_name)
         predictions = sess.run(softmax_tensor,
-                               {'DecodeJpeg/contents:0': image_data})
+                               {'DecodeJpeg/contents:0': image_data, keep_prob: 1.0})
         predictions = np.squeeze(predictions)
 
         top_k = predictions.argsort()[-5:][::-1]  # Getting top 5 predictions
