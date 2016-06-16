@@ -70,11 +70,12 @@ def run_inference_on_image():
     # Creates graph from saved GraphDef.
     create_graph()
 
+
     with tf.Session() as sess:
 
         softmax_tensor = sess.graph.get_tensor_by_name(FLAGS.final_tensor_name)
         predictions = sess.run(softmax_tensor,
-                               {'DecodeJpeg/contents:0': image_data, keep_prob: 1.0})
+                               {'DecodeJpeg/contents:0': image_data, 'final_layer/dropout/Placeholder:0': 1.0})
         predictions = np.squeeze(predictions)
 
         top_k = predictions.argsort()[-5:][::-1]  # Getting top 5 predictions
